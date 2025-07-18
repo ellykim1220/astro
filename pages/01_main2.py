@@ -110,14 +110,14 @@ st.markdown("""
 # ── 알려진 행성 데이터 사전 ──────────────────────────────────────
 # orbital_hr: 행성의 공전주기(시간 단위)
 PLANET_DATA = {
-    'Mercury': {'star_mass': 1.0, 'rotation_hr': 1407.5, 'orbital_hr': 87.97*24, 'O2': 0.0,  'CO2': 0.0},
-    'Venus':   {'star_mass': 1.0, 'rotation_hr': 5832.5, 'orbital_hr': 224.7*24, 'O2': 0.0,  'CO2': 96.5},
-    'Earth':   {'star_mass': 1.0, 'rotation_hr': 23.93,  'orbital_hr': 365.25*24, 'O2': 21.0, 'CO2': 0.04},
-    'Mars':    {'star_mass': 1.0, 'rotation_hr': 24.62,  'orbital_hr': 687.0*24, 'O2': 0.13, 'CO2': 95.0},
-    'Jupiter': {'star_mass': 1.0, 'rotation_hr': 9.93,   'orbital_hr': 4331*24,   'O2': 0.0,  'CO2': 0.0},
-    'Saturn':  {'star_mass': 1.0, 'rotation_hr': 10.7,  'orbital_hr': 10747*24,  'O2': 0.0,  'CO2': 0.0},
-    'Uranus':  {'star_mass': 1.0, 'rotation_hr': 17.2,  'orbital_hr': 30589*24,  'O2': 0.0,  'CO2': 0.0},
-    'Neptune': {'star_mass': 1.0, 'rotation_hr': 16.1,  'orbital_hr': 59800*24,  'O2': 0.0,  'CO2': 0.0}
+    'Mercury': {'rotation_hr': 1407.5, 'orbital_hr': 87.97*24, 'O2': 0.0,  'CO2': 0.0},
+    'Venus':   {'rotation_hr': 5832.5, 'orbital_hr': 224.7*24, 'O2': 0.0,  'CO2': 96.5},
+    'Earth':   {'rotation_hr': 23.93,  'orbital_hr': 365.25*24, 'O2': 21.0, 'CO2': 0.04},
+    'Mars':    {'rotation_hr': 24.62,  'orbital_hr': 687.0*24, 'O2': 0.13, 'CO2': 95.0},
+    'Jupiter': {'rotation_hr': 9.93,   'orbital_hr': 4331*24,   'O2': 0.0,  'CO2': 0.0},
+    'Saturn':  {'rotation_hr': 10.7,  'orbital_hr': 10747*24,  'O2': 0.0,  'CO2': 0.0},
+    'Uranus':  {'rotation_hr': 17.2,  'orbital_hr': 30589*24,  'O2': 0.0,  'CO2': 0.0},
+    'Neptune': {'rotation_hr': 16.1,  'orbital_hr': 59800*24,  'O2': 0.0,  'CO2': 0.0}
 }
 
 # ── 생존성 평가 함수 ────────────────────────────────────────────
@@ -143,7 +143,6 @@ planet = st.selectbox("행성 선택", options=list(PLANET_DATA.keys()))
 info = PLANET_DATA.get(planet)
 if info:
     st.write(f"### 선택된 행성: {planet}")
-    st.write(f"- 별 질량 M★: {info['star_mass']} M☉")
     st.write(f"- 자전 주기: {info['rotation_hr']:.2f} h")
     st.write(f"- 공전 주기: {info['orbital_hr']:.2f} h")
     st.write(f"- 대기 O₂: {info['O2']} %  ·  CO₂: {info['CO2']} %")
