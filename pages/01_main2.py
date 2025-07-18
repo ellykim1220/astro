@@ -108,26 +108,25 @@ st.markdown("""
 )
 
 # ── 알려진 행성 데이터 사전 ──────────────────────────────────────
-# orbital_hr: 행성의 공전주기(시간 단위)
+# rotation_days: 행성 자전 주기(일 단위), orbital_days: 공전 주기(일 단위)
 PLANET_DATA = {
-    'Mercury': {'rotation_hr': 1407.5, 'orbital_hr': 87.97*24, 'O2': 0.0,  'CO2': 0.0},
-    'Venus':   {'rotation_hr': 5832.5, 'orbital_hr': 224.7*24, 'O2': 0.0,  'CO2': 96.5},
-    'Earth':   {'rotation_hr': 23.93,  'orbital_hr': 365.25*24, 'O2': 21.0, 'CO2': 0.04},
-    'Mars':    {'rotation_hr': 24.62,  'orbital_hr': 687.0*24, 'O2': 0.13, 'CO2': 95.0},
-    'Jupiter': {'rotation_hr': 9.93,   'orbital_hr': 4331*24,   'O2': 0.0,  'CO2': 0.0},
-    'Saturn':  {'rotation_hr': 10.7,  'orbital_hr': 10747*24,  'O2': 0.0,  'CO2': 0.0},
-    'Uranus':  {'rotation_hr': 17.2,  'orbital_hr': 30589*24,  'O2': 0.0,  'CO2': 0.0},
-    'Neptune': {'rotation_hr': 16.1,  'orbital_hr': 59800*24,  'O2': 0.0,  'CO2': 0.0}
+    'Mercury': {'rotation_days': 58.65,   'orbital_days': 87.97,  'O2': 0.0,  'CO2': 0.0},
+    'Venus':   {'rotation_days': 243.02,  'orbital_days': 224.70, 'O2': 0.0,  'CO2': 96.5},
+    'Earth':   {'rotation_days': 0.9973,  'orbital_days': 365.25, 'O2': 21.0, 'CO2': 0.04},
+    'Mars':    {'rotation_days': 1.026,   'orbital_days': 687.0,  'O2': 0.13, 'CO2': 95.0},
+    'Jupiter': {'rotation_days': 0.4137,  'orbital_days': 4331,   'O2': 0.0,  'CO2': 0.0},
+    'Saturn':  {'rotation_days': 0.444,   'orbital_days': 10747,  'O2': 0.0,  'CO2': 0.0},
+    'Uranus':  {'rotation_days': 0.718,   'orbital_days': 30589,  'O2': 0.0,  'CO2': 0.0},
+    'Neptune': {'rotation_days': 0.671,   'orbital_days': 59800,  'O2': 0.0,  'CO2': 0.0}
 }
 
-# ── 생존성 평가 함수 ────────────────────────────────────────────
+# ── 평가 함수 ─────────────────────────────────────────────────────
 SAFE_O2_MIN, SAFE_O2_MAX = 19.5, 23.5  # O₂ 안전 범위 (%)
 SAFE_CO2_MAX = 0.5                     # CO₂ 안전 상한 (%)
 
-
-def compute_delta_ratio(rotation_hr, orbital_hr):
+def compute_delta_ratio(rot_days, orb_days):
     """ΔP/P 비율 = |P_spin - P_orb| / P_orb"""
-    return abs(rotation_hr - orbital_hr) / orbital_hr
+    return abs(rot_days - orb_days) / orb_days
 
 
 def compute_hazard(o2, co2):
@@ -139,19 +138,18 @@ def compute_hazard(o2, co2):
 # ── 사용자 인터페이스 ─────────────────────────────────────────────
 planet = st.selectbox("행성 선택", options=list(PLANET_DATA.keys()))
 
-# 선택된 행성 정보 로드
 info = PLANET_DATA.get(planet)
 if info:
     st.write(f"### 선택된 행성: {planet}")
-    st.write(f"- 자전 주기: {info['rotation_hr']:.2f} h")
-    st.write(f"- 공전 주기: {info['orbital_hr']:.2f} h")
+    st.write(f"- 자전 주기: {info['rotation_days']:.2f} 일")
+    st.write(f"- 공전 주기: {info['orbital_days']:.2f} 일")
     st.write(f"- 대기 O₂: {info['O2']} %  ·  CO₂: {info['CO2']} %")
 
-    # 동주기 여부 평가
-    delta_ratio = compute_delta_ratio(info['rotation_hr'], info['orbital_hr'])
+    # 동주기 여부
+    delta_ratio = compute_delta_ratio(info['rotation_days'], info['orbital_days'])
     sync_msg = "❌ 동주기 우려" if delta_ratio < 0.10 else "✅ 비동주기 (생존 가능)"
 
-    # 대기 생존 여부 평가
+    # 대기 생존 여부
     H = compute_hazard(info['O2'], info['CO2'])
     atm_msg = "✅ 생존 가능" if H < 0.10 else "❌ 생존 불가능"
 
