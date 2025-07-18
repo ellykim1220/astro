@@ -89,61 +89,53 @@ import streamlit as st
 from math import pi, sqrt
 
 st.title("🌍 행성 정보 검색 및 생존 평가")
-st.write("알려진 행성 이름을 입력하면 자전주기, 대기 조성 정보를 보여주고 생존 가능성을 평가합니다.")
+st.write("알려진 행성 이름을 선택하면 자전주기, 공전주기, 대기 조성 정보를 보여주고 생존 가능성을 평가합니다.")
 
 # ── 알려진 행성 데이터 사전 ──────────────────────────────────────
+# orbital_hr: 행성의 공전주기(시간 단위)
 PLANET_DATA = {
-    'Mercury': {'star_mass': 1.0, 'rotation_hr': 1407.5, 'O2': 0.0,  'CO2': 0.0},
-    'Venus':   {'star_mass': 1.0, 'rotation_hr': 5832.5, 'O2': 0.0,  'CO2': 96.5},
-    'Earth':   {'star_mass': 1.0, 'rotation_hr': 23.93,  'O2': 21.0, 'CO2': 0.04},
-    'Mars':    {'star_mass': 1.0, 'rotation_hr': 24.62,  'O2': 0.13, 'CO2': 95.0},
-    'Jupiter': {'star_mass': 1.0, 'rotation_hr': 9.93,   'O2': 0.0,  'CO2': 0.0},
-    'Saturn':  {'star_mass': 1.0, 'rotation_hr': 10.7,  'O2': 0.0,  'CO2': 0.0},
-    'Uranus':  {'star_mass': 1.0, 'rotation_hr': 17.2,  'O2': 0.0,  'CO2': 0.0},
-    'Neptune': {'star_mass': 1.0, 'rotation_hr': 16.1,  'O2': 0.0,  'CO2': 0.0}
+    'Mercury': {'star_mass': 1.0, 'rotation_hr': 1407.5, 'orbital_hr': 87.97*24, 'O2': 0.0,  'CO2': 0.0},
+    'Venus':   {'star_mass': 1.0, 'rotation_hr': 5832.5, 'orbital_hr': 224.7*24, 'O2': 0.0,  'CO2': 96.5},
+    'Earth':   {'star_mass': 1.0, 'rotation_hr': 23.93,  'orbital_hr': 365.25*24, 'O2': 21.0, 'CO2': 0.04},
+    'Mars':    {'star_mass': 1.0, 'rotation_hr': 24.62,  'orbital_hr': 687.0*24, 'O2': 0.13, 'CO2': 95.0},
+    'Jupiter': {'star_mass': 1.0, 'rotation_hr': 9.93,   'orbital_hr': 4331*24,   'O2': 0.0,  'CO2': 0.0},
+    'Saturn':  {'star_mass': 1.0, 'rotation_hr': 10.7,  'orbital_hr': 10747*24,  'O2': 0.0,  'CO2': 0.0},
+    'Uranus':  {'star_mass': 1.0, 'rotation_hr': 17.2,  'orbital_hr': 30589*24,  'O2': 0.0,  'CO2': 0.0},
+    'Neptune': {'star_mass': 1.0, 'rotation_hr': 16.1,  'orbital_hr': 59800*24,  'O2': 0.0,  'CO2': 0.0}
 }
 
-# ── 계산 상수 ─────────────────────────────────────────────────────
-G = 6.67430e-11        # 중력상수 (m³/kg/s²)
-M_SUN = 1.98847e30     # 태양 질량 (kg)
-AU = 1.495978707e11    # 천문단위 (m)
-DAY_SEC = 86400        # 하루 (초)
-P_SPIN_INIT = 24 * DAY_SEC  # 초기 자전 24h 가정 (초)
+# ── 생존성 평가 함수 ────────────────────────────────────────────
+SAFE_O2_MIN, SAFE_O2_MAX = 19.5, 23.5  # O₂ 안전 범위 (%)
+SAFE_CO2_MAX = 0.5                     # CO₂ 안전 상한 (%)
 
-# ── 함수 정의 ─────────────────────────────────────────────────────
-def compute_delta_ratio(rotation_hr, a_au, star_mass):
-    """ΔP/P 비율 계산"""
-    # 자전주기 (초)
-    P_spin = rotation_hr * 3600
-    # 공전주기 via 케플러 3법칙
-    P_orb = 2 * pi * sqrt((a_au*AU)**3 / (G * star_mass * M_SUN))
-    return abs(P_spin - P_orb) / P_orb
+def compute_delta_ratio(rotation_hr, orbital_hr):
+    """ΔP/P 비율 = |P_spin - P_orb| / P_orb"""
+    return abs(rotation_hr - orbital_hr) / orbital_hr
 
-SAFE_O2_MIN, SAFE_O2_MAX = 19.5, 23.5
-SAFE_CO2_MAX = 0.5
+
 def compute_hazard(o2, co2):
     """대기 위험 지수 H 계산"""
-    o2_r = 0 if SAFE_O2_MIN <= o2 <= SAFE_O2_MAX else abs(o2 - 21.0)/21.0
-    co2_r = 0 if co2 <= SAFE_CO2_MAX else (co2 - SAFE_CO2_MAX)/SAFE_CO2_MAX
+    o2_r = 0 if SAFE_O2_MIN <= o2 <= SAFE_O2_MAX else abs(o2 - 21.0) / 21.0
+    co2_r = 0 if co2 <= SAFE_CO2_MAX else (co2 - SAFE_CO2_MAX) / SAFE_CO2_MAX
     return o2_r + co2_r
 
 # ── 사용자 인터페이스 ─────────────────────────────────────────────
 planet = st.selectbox("행성 선택", options=list(PLANET_DATA.keys()))
-a = st.number_input("공전 반지름 a (AU)", min_value=0.01, max_value=10.0, value=1.0, step=0.01)
 
-# 정보 조회
+# 선택된 행성 정보 로드
 info = PLANET_DATA.get(planet)
 if info:
     st.write(f"### 선택된 행성: {planet}")
     st.write(f"- 별 질량 M★: {info['star_mass']} M☉")
-    st.write(f"- 자전 주기: {info['rotation_hr']} h")
+    st.write(f"- 자전 주기: {info['rotation_hr']:.2f} h")
+    st.write(f"- 공전 주기: {info['orbital_hr']:.2f} h")
     st.write(f"- 대기 O₂: {info['O2']} %  ·  CO₂: {info['CO2']} %")
 
-    # 동주기 여부
-    delta_ratio = compute_delta_ratio(info['rotation_hr'], a, info['star_mass'])
+    # 동주기 여부 평가
+    delta_ratio = compute_delta_ratio(info['rotation_hr'], info['orbital_hr'])
     sync_msg = "❌ 동주기 우려" if delta_ratio < 0.10 else "✅ 비동주기 (생존 가능)"
 
-    # 대기 생존 여부
+    # 대기 생존 여부 평가
     H = compute_hazard(info['O2'], info['CO2'])
     atm_msg = "✅ 생존 가능" if H < 0.10 else "❌ 생존 불가능"
 
@@ -151,6 +143,9 @@ if info:
     st.write("---")
     st.write(f"**ΔP/P = {delta_ratio:.3f} → {sync_msg}**")
     st.write(f"**Hazard Index H = {H:.2f} → {atm_msg}**")
-    st.caption("ΔP/P 기준: 초기 자전 24h, ΔP/P ≥ 0.10 비동주기, 대기 기준: O₂ 19.5–23.5%, CO₂ ≤ 0.5%")
+    st.caption(
+        "ΔP/P 기준: ΔP/P ≥ 0.10 비동주기, "
+        "대기 기준: O₂ 19.5–23.5%, CO₂ ≤ 0.5%"
+    )
 else:
     st.error("알 수 없는 행성입니다. 목록에서 선택하세요.")
