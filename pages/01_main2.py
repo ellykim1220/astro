@@ -101,29 +101,56 @@ def delta_p_ratio(a_au: float, m_star_solar: float) -> float:
 def classify_ratio(ratio: float) -> str:
     return "✅ 충분한 차이 — 비동주기 (생존 가능)" if ratio >= 0.10 else "❌ 거의 동주기 (생존 불가능)"
 
-# — 스펙트럴 타입 → 평균 질량 (M☉) 맵핑: 주계열성 기준 —
-TYPE_MASS = {
-    'O': 30.0,   # 예시 평균 (15–90 M☉)
-    'B': 6.0,    # 표준 범위 중간
-    'A': 2.0,
-    'F': 1.3,
-    'G': 1.0,
-    'K': 0.75,   # 0.6–0.9 M☉ 범위의 대표값 :contentReference[oaicite:1]{index=1}
-    'M': 0.2,    # 0.1–0.4 M☉ 범위 중간값 :contentReference[oaicite:2]{index=2}
+
+
+# streamlit_hr_interactive.py
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+from math import pi, sqrt
+
+# 📊 스펙트럴 타입별 주요 정보 (대표값)
+data = {
+    'Spectral': ['O5','B0','A0','F0','G2','K5','M5'],
+    'Mass': [30.3, 18.0, 3.2, 1.7, 1.0, 0.69, 0.15],  # M☉  :contentReference[oaicite:2]{index=2}
+    'Temp': [54000, 30000, 9600, 7500, 5780, 4410, 3120],  # 표면 온도 (K)
+    'Lum': [846000, 20000, 80, 6, 1, 0.16, 0.0027]  # 광도 (L☉)
 }
+df = pd.DataFrame(data)
 
-# — UI —
-st.title("🌟 주계열성 기반 ΔP/P 계산기")
-st.write("스펙트럴 타입을 선택하면 해당 별의 질량(M☉) 기준으로 ΔP/P를 계산합니다.")
+# ΔP/P 계산 함수
+G = 6.67430e-11; M_SUN = 1.98847e30; AU = 1.495978707e11; DAY = 86400
+P_SPIN = 24 * DAY
 
-spec = st.selectbox("🌌 스펙트럴 타입 선택 (주계열)", options=list(TYPE_MASS.keys()))
-a = st.number_input("행성–별 궤도 반경 a (AU)", min_value=0.001, value=1.0, step=0.01)
+def orbital_period(a_au, m_solar):
+    return 2 * pi * sqrt((a_au*AU)**3 / (G * m_solar * M_SUN))
 
-if st.button("계산 🔄"):
-    m_star = TYPE_MASS[spec]
-    ratio = delta_p_ratio(a, m_star)
-    st.write(f"**선택한 타입 {spec}-type 평균 질량 = {m_star:.2f} M☉**")
-    st.write(f"**ΔP/P = {ratio:.3f}**")
-    st.write("")  # 한 줄 띄우기
-    st.write(f"### {classify_ratio(ratio)}")
-    st.caption("질량 값은 스펙트럴 타입별 주계열성의 대표값을 사용했습니다.")
+def delta_p_ratio(a, m_solar):
+    P_orb = orbital_period(a, m_solar)
+    return abs(P_SPIN - P_orb) / P_orb
+
+# UI
+st.title("🌟 H–R 다이어그램 기반 ΔP/P 계산기")
+st.write("주계열상의 별 중 하나를 클릭하여 궤도 반경에 따른 ΔP/P 및 생존판정을 확인하세요.")
+
+fig = px.scatter(df, x='Temp', y='Lum', color='Spectral', hover_data=['Mass'],
+                 labels={'Temp':'Temperature (K)', 'Lum':'Luminosity (L☉)'},
+                 title="Click a star type")
+fig.update_layout(xaxis=dict(autorange='reversed'), yaxis_type='log')
+hr = st.plotly_chart(fig, use_container_width=True)
+
+# 클릭 이벤트 처리 (requires streamlit-plotly-events component)
+from streamlit_plotly_events import plotly_events
+pts = plotly_events(fig, click_event=True, hover_event=False)
+
+if pts:
+    idx = pts[0]['pointIndex']
+    row = df.iloc[idx]
+    st.write(f"**선택한 별: {row.Spectral}-type**")
+    st.write(f"- 질량 = {row.Mass:.2f} M☉  ·  표면 온도 = {row.Temp} K  ·  광도 = {row.Lum:.2e} L☉")
+    a = st.slider("🚀 궤도 반경 a (AU)", 0.01, 10.0, 1.0, 0.01)
+    ratio = delta_p_ratio(a, row.Mass)
+    st.write(f"\n**ΔP/P = {ratio:.3f}**")
+    verdict = "✅ 생존 가능 (비동주기)" if ratio >= 0.10 else "❌ 동주기 우려"
+    st.write(f"### {verdict}")
+    st.caption("ΔP/P 계산식은 초기 자전주기를 24 h로 가정하고, ΔP/P ≥ 0.1이면 비동주기로 간주합니다.")
